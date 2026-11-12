@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>יין ויאנג: מציור שטוח לכדור</title>
+<meta name="description" content="לומדה אינטראקטיבית בשמונה שלבים: האם סמל היין והיאנג יכול להיות כדור? משחקים עם כדור תלת מימדי, חותכים אותו במישורים ולומדים על המעבר מציור שטוח לגוף.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="יין ויאנג: מציור שטוח לכדור">
+<meta property="og:description" content="לומדה אינטראקטיבית על חתכים, מישורים והמעבר מדו מימד לתלת מימד, עם כדור שאפשר לסובב ולחתוך.">
+<meta property="og:url" content="https://tomhagiladi.github.io/yin-yang-3d/">
+<meta property="og:image" content="https://tomhagiladi.github.io/yin-yang-3d/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{
+    --ink:#f1f4f7;
+    --muted:#b9c4cf;
+    --glass:rgba(13,19,27,.74);
+    --line:rgba(255,255,255,.14);
+    --chip:rgba(255,255,255,.08);
+    --chip-hover:rgba(255,255,255,.16);
+    --paper:#f3f0e8;
+    --focus:#ffd166;
+    --ok:#7fd6a4;
+    --amber:#ffb454;
+    --card-w:356px;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{height:100%;margin:0}
+  body{
+    background:#0c1118;color:var(--ink);overflow:hidden;
+    font-family:"Segoe UI","Heebo","Assistant","Arial Hebrew",Arial,sans-serif;
+  }
+  #gl{
+    position:fixed;inset:0;width:100%;height:100%;display:block;
+    touch-action:none;cursor:grab;outline:none;
+  }
+  #gl:active{cursor:grabbing}
+  button{font:inherit;color:inherit}
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible,#gl:focus-visible{
+    outline:3px solid var(--focus);outline-offset:3px;border-radius:4px;
+  }
+  main:focus,main:focus-visible{outline:none}
+
+  /* accessibility basics */
+  .skip-link{
+    position:absolute;top:-100%;right:0;z-index:200;padding:.75rem 1.5rem;
+    background:var(--paper);color:#12171d;font-weight:700;text-decoration:none;
+  }
+  .skip-link:focus{top:0}
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+  .a11yDlg{
+    width:min(560px, calc(100% - 32px));max-height:calc(100% - 32px);overflow:auto;padding:22px 24px 18px;
+    color:var(--ink);background:#141b24;border:1px solid var(--line);border-radius:16px;
+  }
+  .a11yDlg::backdrop{background:rgba(5,8,12,.6)}
+  .a11yDlg h2{margin:0 0 10px;font-size:21px}
+  .a11yDlg p{margin:0 0 12px;font-size:15px;line-height:1.65}
+  .a11yDlg a{color:var(--focus)}
+  .a11yDlg button{
+    min-height:44px;padding:8px 18px;border:0;border-radius:10px;
+    background:var(--paper);color:#12171d;font-size:15px;font-weight:600;cursor:pointer;
+  }
+  .a11yLink{display:block}
+  .startA11y{margin:12px auto 0;padding-bottom:0}
+
+  /* the flat symbol and the live section, side by side */
+  .insets{
+    position:fixed;top:16px;left:16px;display:flex;gap:14px;align-items:flex-start;
+    direction:ltr;pointer-events:none;
+  }
+  .inset{margin:0;width:112px;text-align:center;direction:rtl;font-size:12.5px;color:var(--muted)}
+  .inset svg,.inset canvas{
+    display:block;width:112px;height:112px;margin:0 auto 6px;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.4));
+  }
+  .badge{
+    margin-top:6px;padding:3px 6px;border-radius:999px;font-size:12px;
+    background:rgba(255,255,255,.12);color:var(--ink);
+  }
+  .badge.ok{background:var(--ok);color:#0d1a13;font-weight:600}
+
+  /* the lesson card */
+  .card{
+    position:fixed;top:16px;right:16px;width:var(--card-w);max-height:calc(100% - 32px);
+    display:flex;flex-direction:column;overflow:hidden;
+    background:var(--glass);border:1px solid var(--line);border-radius:18px;
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  .card header{padding:12px 16px 8px;border-bottom:1px solid var(--line)}
+  .kicker{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .kicker h1{margin:0;font-size:13.5px;font-weight:600;color:var(--muted)}
+  .mini{
+    padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:var(--chip);
+    font-size:12.5px;cursor:pointer;
+  }
+  .mini:hover{background:var(--chip-hover)}
+  .dots{display:flex;gap:5px;margin-top:8px}
+  .dots button{
+    flex:1;height:20px;padding:0;border:0;background:transparent;cursor:pointer;position:relative;
+  }
+  .dots button::before{
+    content:"";position:absolute;inset:7px 0;border-radius:3px;background:rgba(255,255,255,.4);
+  }
+  .dots button.done::before{background:var(--ok)}
+  .dots button[aria-current="step"]::before{background:var(--paper);inset:5px 0}
+  .cbody{padding:14px 16px 6px;overflow:auto}
+  .count{margin:0 0 2px;font-size:12.5px;color:var(--muted)}
+  .cbody h2{margin:0 0 8px;font-size:21px;line-height:1.25}
+  .cbody p{margin:0 0 10px;font-size:15px;line-height:1.65}
+  .task{
+    display:flex;gap:10px;align-items:flex-start;margin:12px 0 10px;padding:11px 12px;
+    border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.05);
+  }
+  .task .mark{
+    flex:none;width:22px;height:22px;margin-top:1px;border-radius:50%;border:2px solid var(--muted);
+    display:grid;place-items:center;font-size:14px;font-weight:700;
+  }
+  .task.done{border-color:rgba(127,214,164,.6)}
+  .task.done .mark{border-color:var(--ok);background:var(--ok);color:#0d1a13}
+  .task.done .mark::before{content:"\2713"}
+  .task strong,.principle strong{font-size:12.5px;font-weight:600}
+  .task strong{color:var(--muted)}
+  .task .grow{flex:1;min-width:0}
+  .hrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+  .hrow h2{margin:0}
+  #partIntro{margin:0 -8px 2px;padding:6px 8px 1px;border-radius:12px}
+  #partIntro .hrow{margin-bottom:8px}
+  .say{
+    flex:none;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;
+    border:1px solid var(--line);border-radius:999px;background:var(--chip);
+    font-size:12px;cursor:pointer;
+  }
+  .say:hover{background:var(--chip-hover)}
+  .say[aria-pressed="true"]{background:var(--focus);color:#1b1503;border-color:transparent}
+  .speaking{box-shadow:0 0 0 2px rgba(255,209,102,.75)}
+  .voiceNote{margin:0 0 10px;font-size:13px;color:var(--muted)}
+  .tools{display:flex;gap:6px}
+  .mini[aria-pressed="true"]{background:var(--paper);color:#12171d;border-color:transparent}
+  .mini:disabled{opacity:.45;cursor:default}
+  .task p{margin:0}
+  .principle{
+    margin:0 0 10px;padding:11px 12px;border-radius:12px;
+    background:rgba(255,180,84,.10);border:1px solid rgba(255,180,84,.38);
+  }
+  .principle strong{color:var(--amber)}
+  .principle p:last-child{margin-bottom:0}
+  .link{
+    background:none;border:0;padding:2px 0 8px;color:var(--muted);font-size:13px;
+    text-decoration:underline;cursor:pointer;
+  }
+  table.sum{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:13px;line-height:1.45}
+  table.sum th,table.sum td{text-align:start;vertical-align:top;padding:6px 4px;border-bottom:1px solid var(--line)}
+  table.sum th{color:var(--muted);font-weight:600}
+  .card footer{display:flex;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+  .card footer button{
+    flex:1;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;
+    background:var(--chip);font-size:15px;cursor:pointer;
+  }
+  .card footer button:hover:not(:disabled){background:var(--chip-hover)}
+  .card footer button:disabled{opacity:.4;cursor:default}
+  .card footer button.primary{background:var(--paper);color:#12171d;border-color:transparent;font-weight:600}
+  .showCard{position:fixed;top:16px;right:16px;padding:8px 13px;font-size:14px}
+
+  /* the tool panel */
+  .panel{
+    position:fixed;bottom:16px;left:calc((100% - var(--card-w) - 32px) / 2);transform:translateX(-50%);
+    width:min(720px, calc(100% - var(--card-w) - 64px));padding:14px 16px 12px;
+    background:var(--glass);border:1px solid var(--line);border-radius:18px;
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;
+  }
+  body.nocard .panel{left:50%;width:min(760px, calc(100% - 24px))}
+  .modes{grid-column:1 / -1;display:flex;gap:6px;padding:4px;background:rgba(0,0,0,.28);border-radius:12px}
+  .modes button{
+    flex:1;padding:9px 10px;border:0;border-radius:9px;background:transparent;
+    font-size:15px;font-weight:600;cursor:pointer;
+  }
+  .modes button:hover{background:var(--chip)}
+  .modes button[aria-checked="true"]{background:var(--paper);color:#12171d}
+  .slider{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
+  .slider > span{display:flex;justify-content:space-between;gap:8px}
+  .slider output{color:var(--ink);font-size:13px}
+  .slider input{width:100%;margin:0;accent-color:var(--paper);cursor:pointer}
+  .check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer}
+  .check input{width:18px;height:18px;margin:0;accent-color:var(--paper);cursor:pointer}
+  .hl{outline:2px solid var(--focus);outline-offset:6px;border-radius:10px}
+  .btns{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .btns button{
+    padding:8px 13px;min-height:38px;border:1px solid var(--line);border-radius:10px;
+    background:var(--chip);font-size:14px;cursor:pointer;
+  }
+  .btns button:hover{background:var(--chip-hover)}
+  .btns button[aria-pressed="true"]{background:var(--paper);color:#12171d;border-color:transparent}
+  .btns .zoom{min-width:38px;font-size:18px;line-height:1;padding:6px 0}
+
+  /* the opening screen */
+  .start{
+    position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;
+    padding:24px;pointer-events:none;
+  }
+  .startBox{
+    pointer-events:auto;width:min(580px,100%);padding:22px 24px 20px;text-align:center;
+    background:var(--glass);border:1px solid var(--line);border-radius:20px;
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  .startBox .k{margin:0 0 4px;font-size:13px;color:var(--muted)}
+  .startBox h2{margin:0 0 8px;font-size:clamp(22px,2.6vw,30px);line-height:1.2}
+  .startBox p{margin:0 0 14px;font-size:15.5px;line-height:1.65}
+  .startBox .startNote{font-size:13.5px;color:var(--muted)}
+  .startBtns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  .startBtns button{
+    min-height:44px;padding:10px 18px;border:1px solid var(--line);border-radius:12px;
+    background:var(--chip);font-size:16px;cursor:pointer;
+  }
+  .startBtns button:hover{background:var(--chip-hover)}
+  .startBtns button.primary{background:var(--paper);color:#12171d;border-color:transparent;font-weight:600}
+  body.intro .card,body.intro .panel,body.intro .insets,body.intro .showCard{visibility:hidden}
+
+  #nogl{
+    display:none;position:fixed;inset:0;place-items:center;padding:24px;text-align:center;
+    font-size:18px;line-height:1.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference){
+    .hl{animation:pulse 1.6s ease-in-out infinite}
+    @keyframes pulse{50%{outline-color:rgba(255,209,102,.25)}}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms !important;transition-duration:.01ms !important;scroll-behavior:auto !important;
+    }
+  }
+
+  /* bigger touch targets on phones and tablets */
+  @media (pointer:coarse){
+    .mini,.say{min-height:44px;padding-inline:12px}
+    .btns button,.card footer button,.modes button{min-height:44px}
+    .btns .zoom{min-width:44px}
+    .dots button{height:32px}
+    .dots button::before{inset:12px 0}
+    .dots button[aria-current="step"]::before{inset:10px 0}
+  }
+
+  @media (max-width:1100px){
+    :root{--card-w:330px}
+  }
+  @media (max-width:900px){
+    .card{left:8px;right:8px;top:8px;width:auto;max-height:42%}
+    .showCard{top:8px;right:8px}
+    .panel,body.nocard .panel{left:50%;width:calc(100% - 16px);bottom:8px;padding:12px;gap:10px 14px}
+    .insets{top:calc(var(--card-bottom, 8px) + 8px);left:8px;gap:8px}
+    .inset{width:84px}
+    .inset svg,.inset canvas{width:84px;height:84px}
+    .inset.ref{display:none}
+  }
+  @media (max-width:560px){
+    .panel{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body class="intro">
+<a href="#main-content" class="skip-link">דלג לתוכן הראשי</a>
+
+<main id="main-content" tabindex="-1">
+<canvas id="gl" tabindex="0" aria-label="הדמיה תלת מימדית של סמל היין והיאנג ככדור. גרירה מסובבת את התצוגה, הגלגלת מגדילה ומקטינה, וגם מקשי החצים ופלוס ומינוס."></canvas>
+
+<div class="insets" id="insets">
+  <figure class="inset ref">
+    <svg viewBox="-54 -54 108 108" role="img" aria-label="סמל היין והיאנג המקורי, הדו מימדי">
+      <circle r="50" fill="#f3f0e8"/>
+      <path d="M0,-50 A50,50 0 0 0 0,50 A25,25 0 0 0 0,0 A25,25 0 0 1 0,-50 Z" fill="#14171b"/>
+      <circle cx="0" cy="25" r="7.5" fill="#f3f0e8"/>
+      <circle cx="0" cy="-25" r="7.5" fill="#14171b"/>
+      <circle r="50" fill="none" stroke="#14171b" stroke-width="2"/>
+    </svg>
+    <figcaption>הסמל המקורי</figcaption>
+  </figure>
+  <figure class="inset" id="sectionBox" hidden>
+    <canvas id="sec" width="224" height="224" role="img" aria-label="החתך הנוכחי, כצורה שטוחה"></canvas>
+    <figcaption>החתך עכשיו</figcaption>
+    <div class="badge" id="badge" role="status" aria-live="polite"></div>
+  </figure>
+</div>
+
+<section class="card" id="card" aria-label="מסע הלמידה">
+  <header>
+    <div class="kicker">
+      <h1>יין ויאנג: מציור שטוח לכדור</h1>
+      <span class="tools">
+        <button type="button" class="mini" id="voiceBtn" aria-pressed="false" title="הפעלה או השתקה של הקריינות">קריינות</button>
+        <button type="button" class="mini" id="hideCard">הסתרה</button>
+      </span>
+    </div>
+    <div class="dots" id="dots" aria-label="שלבי המסע"></div>
+  </header>
+  <div class="cbody" id="cbody">
+    <p class="count" id="count"></p>
+    <p class="voiceNote" id="voiceNote" hidden>אין קריינות, כי במחשב הזה לא נמצא קול עברי להקראה.</p>
+    <div id="partIntro">
+      <div class="hrow">
+        <h2 id="title"></h2>
+        <button type="button" class="say" data-part="intro" aria-pressed="false" aria-label="הקראת ההסבר">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>הקראה</span>
+        </button>
+      </div>
+      <div id="intro"></div>
+    </div>
+    <div class="task" id="task">
+      <span class="mark" aria-hidden="true"></span>
+      <div class="grow">
+        <div class="hrow">
+          <strong>נסו בעצמכם</strong>
+          <button type="button" class="say" data-part="task" aria-pressed="false" aria-label="הקראת המשימה">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>הקראה</span>
+          </button>
+        </div>
+        <p id="taskText"></p>
+      </div>
+    </div>
+    <div class="principle" id="principle" hidden>
+      <div class="hrow">
+        <strong>העיקרון</strong>
+        <button type="button" class="say" data-part="principle" aria-pressed="false" aria-label="הקראת העיקרון">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>הקראה</span>
+        </button>
+      </div>
+      <div id="principleText"></div>
+    </div>
+    <button type="button" class="link" id="reveal">לא מצליחים? הציגו את המסקנה</button>
+    <button type="button" class="link a11yLink" data-a11y>הצהרת נגישות</button>
+  </div>
+  <footer>
+    <button type="button" id="prev">הקודם</button>
+    <button type="button" id="next">הבא</button>
+  </footer>
+</section>
+<button type="button" class="mini showCard" id="showCard" hidden>הצגת ההסבר</button>
+
+<div class="panel" id="panel">
+  <div class="modes" role="radiogroup" aria-label="הדרך לתת עומק" data-tool="modes">
+    <button type="button" role="radio" aria-checked="true" data-mode="0">משיכה</button>
+    <button type="button" role="radio" aria-checked="false" data-mode="1">סיבוב</button>
+    <button type="button" role="radio" aria-checked="false" data-mode="2">ערימה</button>
+  </div>
+
+  <label class="slider" data-tool="sep">
+    <span>הפרדה בין החלקים</span>
+    <input type="range" id="sep" min="0" max="100" value="0">
+  </label>
+  <label class="check" data-tool="cut">
+    <input type="checkbox" id="cutOn"> מישור חיתוך
+  </label>
+  <label class="slider" data-tool="shift">
+    <span>הזזת המישור <output id="shiftOut"></output></span>
+    <input type="range" id="shift" min="-95" max="95" value="0">
+  </label>
+  <label class="slider" data-tool="tilt">
+    <span>הטיית המישור <output id="tiltOut" dir="ltr"></output></span>
+    <input type="range" id="tilt" min="-90" max="90" value="0">
+  </label>
+  <label class="slider" data-tool="dir">
+    <span>כיוון ההטיה <output id="dirOut" dir="ltr"></output></span>
+    <input type="range" id="dir" min="0" max="180" value="0">
+  </label>
+
+  <div class="btns">
+    <button type="button" id="topview">מבט מלמעלה</button>
+    <button type="button" id="faceview" hidden>מבט אל החתך</button>
+    <button type="button" id="zin" class="zoom" aria-label="הגדלה">+</button>
+    <button type="button" id="zout" class="zoom" aria-label="הקטנה">-</button>
+    <button type="button" id="auto" aria-pressed="true">תצוגה מסתובבת</button>
+    <button type="button" id="reset">איפוס השלב</button>
+  </div>
+</div>
+
+<div class="start" id="start">
+  <div class="startBox" id="startBox" role="dialog" aria-labelledby="startTitle">
+    <p class="k">לומדה אינטראקטיבית</p>
+    <h2 id="startTitle">יין ויאנג: מציור שטוח לכדור</h2>
+    <p>מסע קצר בשמונה שלבים על חתכים, על מישורים ועל הדרך מציור שטוח לגוף תלת מימדי. בכל שלב משחקים עם הכדור ומגלים עיקרון אחד.</p>
+    <p class="startNote" id="startNote" hidden>במחשב הזה לא נמצא קול עברי להקראה, ולכן המסע יתנהל בלי קריינות.</p>
+    <div class="startBtns">
+      <button type="button" class="primary" id="startVoice">התחילו עם קריינות</button>
+      <button type="button" id="startQuiet">התחילו בלי קריינות</button>
+    </div>
+    <button type="button" class="link a11yLink startA11y" data-a11y>הצהרת נגישות</button>
+  </div>
+</div>
+
+<div id="nogl">הדפדפן הזה לא מצליח להציג גרפיקה תלת מימדית.<br>כדאי לנסות לפתוח את הדף בכרום.</div>
+</main>
+
+<dialog class="a11yDlg" id="a11yDlg" aria-labelledby="a11yTitle">
+  <h2 id="a11yTitle">הצהרת נגישות</h2>
+  <p>אתר זה עומד בדרישות תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013, ותקן ישראלי ת"י 5568 המבוסס על הנחיות <span lang="en" dir="ltr">WCAG 2.0</span> ברמה <span lang="en" dir="ltr">AA</span>.</p>
+  <p>אפשר לעבור על כל הלומדה במקלדת: מקש הטאב עובר בין הכפתורים והמחוונים, ובהדמיה עצמה מקשי החצים מסובבים את הכדור, והמקשים פלוס ומינוס מגדילים ומקטינים. כל טקסט בלומדה מוקרא גם בקול, ואפשר להשתיק את הקריינות או להקריא מחדש כל חלק.</p>
+  <p>אם נתקלתם בבעיית נגישות באתר, אנא פנו אלינו ונשמח לסייע:</p>
+  <p><strong>רכז נגישות:</strong> תום הגלעדי<br>
+    <strong>אימייל:</strong> <a href="mailto:tomhagiladi@gmail.com" lang="en" dir="ltr">tomhagiladi@gmail.com</a></p>
+  <form method="dialog"><button type="submit" autofocus>סגירה</button></form>
+</dialog>
+<script>
+(() => {
+  const dlg = document.getElementById('a11yDlg');
+  let opener = null;
+  document.querySelectorAll('[data-a11y]').forEach(b => b.addEventListener('click', () => {
+    opener = b;
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }));
+  dlg.addEventListener('close', () => { if (opener) opener.focus(); });
+})();
+</script>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // ------------------------------------------------------------------
+  // The three bodies. Each is described by a function that is negative
+  // inside the light part; the dark part is the same shape turned half a
+  // circle. All three give exactly the flat symbol on the plane z = 0.
+  // ------------------------------------------------------------------
+  const BODY = `
+uniform float uMode;   // 0 = pulled straight up, 1 = revolved, 2 = stacked slices
+const float EYE = 0.15;
+
+float taiji(vec2 q){
+  float dA = length(q - vec2(0.0, 0.5)) - 0.5;
+  float dB = length(q + vec2(0.0, 0.5)) - 0.5;
+  return min(max(-q.x, -dB), dA);
+}
+// the flat symbol of a slice: scaled to the slice, and turned with height
+vec2 sliceUV(vec3 p, out float r){
+  r = sqrt(max(1.0 - p.z*p.z, 1e-4));
+  return vec2(r*p.x - p.z*p.y, p.z*p.x + r*p.y) / r;
+}
+float gW(vec3 p){
+  if(uMode < 0.5) return taiji(p.xy);
+  if(uMode < 1.5){
+    float dA = length(p - vec3(0.0, 0.5, 0.0)) - 0.5;
+    float dB = length(p + vec3(0.0, 0.5, 0.0)) - 0.5;
+    return min(max(-p.x, -dB), dA);
+  }
+  float r;
+  vec2 q = sliceUV(p, r);
+  return taiji(q) * r;
+}
+float gBody(vec3 p, float body){
+  return gW(body > 0.5 ? vec3(-p.x, -p.y, p.z) : p);
+}
+// 1.0 where the light part carries a dark dot
+float darkW(vec3 p){
+  if(uMode < 0.5) return length(p.xy - vec2(0.0, 0.5)) < EYE ? 1.0 : 0.0;
+  if(uMode < 1.5) return length(p - vec3(0.0, 0.5, 0.0)) < EYE ? 1.0 : 0.0;
+  float r;
+  vec2 q = sliceUV(p, r);
+  if(length(q - vec2(0.0, 0.5)) < EYE) return 1.0;
+  if(dot(p, p) > 0.93){
+    if(length(p - vec3(0.0, -0.5,  0.8660254)) < EYE) return 1.0;
+    if(length(p - vec3(0.0,  0.5, -0.8660254)) < EYE) return 1.0;
+  }
+  return 0.0;
+}
+float darkOf(vec3 p, float body){
+  return body > 0.5 ? 1.0 - darkW(vec3(-p.x, -p.y, p.z)) : darkW(p);
+}
+`;
+
+  const VERT = `
+attribute vec2 aPos;
+void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }
+`;
+
+  // Main picture: one ray per sample from the camera, tested against the two parts,
+  // the axis rod and the glass sheet that shows the cutting plane.
+  const FRAG = `
+precision highp float;
+uniform vec2  uRes;
+uniform vec2  uOff;
+uniform float uScale;
+uniform vec3  uCam;
+uniform mat3  uCamMat;
+uniform float uFocal;
+uniform float uSep;
+uniform vec3  uSepDir;
+uniform vec3  uPlaneN;   // kept side: dot(n, p) <= d, measured on the assembled ball
+uniform float uPlaneD;
+uniform vec3  uPlaneU;   // frame of the glass sheet; V is the hinge it tilts around
+uniform vec3  uPlaneV;
+uniform float uGlass;
+uniform vec3  uAxis;     // direction of the axis rod, zero when hidden
+uniform float uGrid;
+${BODY}
+const int STEPS = 80;
+
+bool span(vec3 oc, vec3 rd, out float ta, out float tb, out float viaCut){
+  ta = 0.0; tb = 0.0; viaCut = 0.0;
+  float b = dot(oc, rd);
+  float c = dot(oc, oc) - 1.0;
+  float h = b*b - c;
+  if(h <= 0.0) return false;
+  h = sqrt(h);
+  ta = -b - h; tb = -b + h;
+  float dn = dot(uPlaneN, rd);
+  float num = uPlaneD - dot(uPlaneN, oc);
+  if(dn > 1e-6){
+    tb = min(tb, num / dn);
+  } else if(dn < -1e-6){
+    float tc = num / dn;
+    if(tc > ta){ ta = tc; viaCut = 1.0; }
+  } else if(num < 0.0){
+    return false;
+  }
+  ta = max(ta, 0.0);
+  return ta < tb;
+}
+
+float march(vec3 oc, vec3 rd, float body, float ta, float tb, float tMax, out vec3 n){
+  n = vec3(0.0, 0.0, 1.0);
+  float dt = (tb - ta) / float(STEPS);
+  float t = ta;
+  for(int i = 0; i < STEPS; i++){
+    if(t > tMax) break;
+    t += dt;
+    if(gBody(oc + rd*t, body) < 0.0){
+      float lo = t - dt, hi = t;
+      for(int j = 0; j < 7; j++){
+        float m = 0.5*(lo + hi);
+        if(gBody(oc + rd*m, body) < 0.0) hi = m; else lo = m;
+      }
+      vec3 p = oc + rd*hi;
+      vec2 e = vec2(0.003, 0.0);
+      vec3 gr = vec3(
+        gBody(p + e.xyy, body) - gBody(p - e.xyy, body),
+        gBody(p + e.yxy, body) - gBody(p - e.yxy, body),
+        gBody(p + e.yyx, body) - gBody(p - e.yyx, body));
+      float l = length(gr);
+      n = l > 1e-7 ? gr / l : -rd;
+      if(dot(n, rd) > 0.0) n = -n;
+      return hi;
+    }
+  }
+  return -1.0;
+}
+
+float rod(vec3 ro, vec3 rd, out vec3 n){
+  n = vec3(0.0);
+  if(dot(uAxis, uAxis) < 0.5) return -1.0;
+  vec3 d = rd - uAxis*dot(rd, uAxis);
+  vec3 o = ro - uAxis*dot(ro, uAxis);
+  float A = dot(d, d);
+  if(A < 1e-8) return -1.0;
+  float B = dot(o, d);
+  float C = dot(o, o) - 0.013*0.013;
+  float h = B*B - A*C;
+  if(h < 0.0) return -1.0;
+  float t = (-B - sqrt(h)) / A;
+  if(t < 0.0) return -1.0;
+  vec3 p = ro + rd*t;
+  if(abs(dot(p, uAxis)) > 1.34) return -1.0;
+  n = normalize(p - uAxis*dot(p, uAxis));
+  return t;
+}
+
+float sheet(vec3 ro, vec3 rd, out float t){
+  t = -1.0;
+  if(uGlass <= 0.0) return 0.0;
+  float dn = dot(uPlaneN, rd);
+  if(abs(dn) < 1e-6) return 0.0;
+  t = (uPlaneD - dot(uPlaneN, ro)) / dn;
+  if(t <= 0.0) return 0.0;
+  vec3 p = ro + rd*t - uPlaneN*uPlaneD;
+  float u = dot(p, uPlaneU), v = dot(p, uPlaneV);
+  float m = max(abs(u), abs(v));
+  if(m > 1.3) return 0.0;
+  float a = 0.10;
+  a = max(a, 0.55 * smoothstep(1.27, 1.29, m));
+  a = max(a, 0.30 * (1.0 - smoothstep(0.004, 0.012, abs(u))));
+  return a * uGlass;
+}
+
+vec3 lightDir(){
+  return normalize(-0.45*uCamMat[0] + 0.70*uCamMat[1] - 0.60*uCamMat[2]);
+}
+
+vec3 shade(vec3 n, vec3 rd, float dark, float gloss){
+  vec3 albedo = mix(vec3(0.86, 0.85, 0.80), vec3(0.018, 0.018, 0.022), dark);
+  vec3 L1 = lightDir();
+  vec3 L2 = normalize(0.70*uCamMat[0] - 0.15*uCamMat[1] - 0.45*uCamMat[2]);
+  float d1 = max(dot(n, L1), 0.0);
+  float d2 = max(dot(n, L2), 0.0);
+  float amb = 0.30 + 0.12*dot(n, uCamMat[1]);
+  vec3 col = albedo * (amb + 0.80*d1 + 0.18*d2);
+  vec3 h = normalize(L1 - rd);
+  col += gloss * pow(max(dot(n, h), 0.0), 70.0) * mix(0.22, 0.40, dark);
+  float fr = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+  col += gloss * fr * mix(vec3(0.04), vec3(0.10, 0.12, 0.15), dark);
+  return col;
+}
+
+vec3 background(vec2 uv){
+  float d = length(uv * vec2(0.85, 1.0));
+  return mix(vec3(0.170, 0.235, 0.310), vec3(0.016, 0.026, 0.045), smoothstep(0.0, 1.2, d));
+}
+
+vec3 render(vec3 ro, vec3 rd, vec2 uv){
+  float tBest = 1e9;
+  vec3  nBest = vec3(0.0, 0.0, 1.0);
+  float dBest = 0.0;
+  float gloss = 1.0;
+
+  vec3 off = uSepDir * uSep;
+  vec3 oc0 = ro - off;
+  vec3 oc1 = ro + off;
+  float ta0, tb0, vc0, ta1, tb1, vc1;
+  bool in0 = span(oc0, rd, ta0, tb0, vc0);
+  bool in1 = span(oc1, rd, ta1, tb1, vc1);
+  bool m0 = in0, m1 = in1;
+
+  if(in0){
+    vec3 p = oc0 + rd*ta0;
+    if(gBody(p, 0.0) < 0.0){
+      m0 = false;
+      tBest = ta0;
+      nBest = vc0 > 0.5 ? uPlaneN : normalize(p);
+      dBest = darkOf(p, 0.0);
+      gloss = vc0 > 0.5 ? 0.25 : 1.0;
+    }
+  }
+  if(in1){
+    vec3 p = oc1 + rd*ta1;
+    if(gBody(p, 1.0) < 0.0){
+      m1 = false;
+      if(ta1 < tBest){
+        tBest = ta1;
+        nBest = vc1 > 0.5 ? uPlaneN : normalize(p);
+        dBest = darkOf(p, 1.0);
+        gloss = vc1 > 0.5 ? 0.25 : 1.0;
+      }
+    }
+  }
+  if(m0 && ta0 < tBest){
+    vec3 n;
+    float t = march(oc0, rd, 0.0, ta0, tb0, tBest, n);
+    if(t > 0.0 && t < tBest){ tBest = t; nBest = n; dBest = darkOf(oc0 + rd*t, 0.0); gloss = 0.6; }
+  }
+  if(m1 && ta1 < tBest){
+    vec3 n;
+    float t = march(oc1, rd, 1.0, ta1, tb1, tBest, n);
+    if(t > 0.0 && t < tBest){ tBest = t; nBest = n; dBest = darkOf(oc1 + rd*t, 1.0); gloss = 0.6; }
+  }
+
+  vec3 col = tBest < 1e8 ? shade(nBest, rd, dBest, gloss) : background(uv);
+  float tOpaque = tBest;
+
+  vec3 rn;
+  float tr = rod(ro, rd, rn);
+  if(tr > 0.0 && tr < tOpaque){
+    col = vec3(0.95, 0.50, 0.10) * (0.45 + 0.75*max(dot(rn, lightDir()), 0.0));
+    tOpaque = tr;
+  }
+
+  float ts;
+  float a = sheet(ro, rd, ts);
+  if(a > 0.0 && ts < tOpaque - 0.002) col = mix(col, vec3(0.55, 0.78, 0.95), a);
+
+  // The part that the plane removed stays visible as a clear shell, so the whole
+  // ball is seen standing still while the plane moves inside it.
+  if(uGlass > 0.0){
+    float gb = dot(ro, rd);
+    float gh = gb*gb - (dot(ro, ro) - 1.0);
+    if(gh > 0.0){
+      float tg = -gb - sqrt(gh);
+      vec3 pg = ro + rd*tg;
+      if(tg > 0.0 && tg < tOpaque - 0.002 && dot(uPlaneN, pg) > uPlaneD){
+        float dk = gW(pg) < 0.0 ? darkW(pg) : 1.0 - darkW(vec3(-pg.x, -pg.y, pg.z));
+        float fr = pow(1.0 - max(dot(pg, -rd), 0.0), 2.0);
+        // nearly clear where we look straight through it, so the section stays easy to
+        // read, and stronger towards the rim, where the fixed colours of the ball show
+        col = mix(col, shade(pg, rd, dk, 0.6), (0.06 + 0.55*fr) * uGlass);
+      }
+    }
+  }
+  return col;
+}
+
+void main(){
+  // several rays per pixel, on a small grid, so that edges come out smooth
+  vec3 acc = vec3(0.0);
+  float total = uGrid * uGrid;
+  for(int i = 0; i < 16; i++){
+    float fi = float(i);
+    if(fi >= total) break;
+    vec2 o = (vec2(mod(fi, uGrid), floor(fi / uGrid)) + 0.5) / uGrid - 0.5;
+    vec2 uv = (gl_FragCoord.xy + o - 0.5*uRes - uOff) / uScale;
+    vec3 rd = normalize(uCamMat * vec3(uv, uFocal));
+    acc += render(uCam, rd, uv);
+  }
+  acc /= total;
+  vec3 col = pow(clamp(acc, 0.0, 1.0), vec3(1.0/2.2));
+  float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+  col += (noise - 0.5) / 255.0;
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+  // Small picture: the section itself, seen straight on, as a flat shape.
+  const SEC_FRAG = `
+precision highp float;
+uniform vec2  uRes;
+uniform vec3  uN;
+uniform vec3  uE1;
+uniform vec3  uE2;
+uniform float uD;
+${BODY}
+void main(){
+  vec4 acc = vec4(0.0);
+  for(int i = 0; i < 9; i++){
+    float fi = float(i);
+    vec2 o = (vec2(mod(fi, 3.0), floor(fi / 3.0)) + 0.5) / 3.0 - 0.5;
+    vec2 uv = ((gl_FragCoord.xy + o) / uRes * 2.0 - 1.0) * 1.06;
+    vec3 p = uN*uD + uE1*uv.x + uE2*uv.y;
+    float rr = dot(p, p);
+    if(rr <= 1.0){
+      float dark = gW(p) < 0.0 ? darkW(p) : 1.0 - darkW(vec3(-p.x, -p.y, p.z));
+      if(rr > 0.955) dark = 1.0;
+      acc += vec4(mix(vec3(0.953, 0.941, 0.910), vec3(0.078, 0.090, 0.106), dark), 1.0);
+    } else if(abs(length(uv) - 1.0) < 0.014){
+      acc += vec4(0.32);   // faint ring at the size of the full symbol, for comparison
+    }
+  }
+  gl_FragColor = acc / 9.0;
+}
+`;
+
+  // ------------------------------------------------------------------
+  // WebGL setup
+  // ------------------------------------------------------------------
+  const canvas = $('gl');
+  const secCanvas = $('sec');
+  const panel = $('panel');
+  const card = $('card');
+
+  function fail() {
+    $('nogl').style.display = 'grid';
+    panel.hidden = true;
+    card.hidden = true;
+    $('insets').hidden = true;
+  }
+
+  function build(gl, fragSrc, names) {
+    const mk = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    };
+    const vs = mk(gl.VERTEX_SHADER, VERT);
+    const fs = mk(gl.FRAGMENT_SHADER, fragSrc);
+    if (!vs || !fs) return null;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error(gl.getProgramInfoLog(prog));
+      return null;
+    }
+    gl.useProgram(prog);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, 'aPos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+    const U = {};
+    names.forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+    return U;
+  }
+
+  const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' })
+          || canvas.getContext('experimental-webgl');
+  if (!gl) { fail(); return; }
+  const U = build(gl, FRAG, ['uRes', 'uOff', 'uScale', 'uCam', 'uCamMat', 'uFocal', 'uMode', 'uSep', 'uSepDir',
+    'uPlaneN', 'uPlaneD', 'uPlaneU', 'uPlaneV', 'uGlass', 'uAxis', 'uGrid']);
+  if (!U) { fail(); return; }
+
+  const gl2 = secCanvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true });
+  const U2 = gl2 ? build(gl2, SEC_FRAG, ['uRes', 'uN', 'uE1', 'uE2', 'uD', 'uMode']) : null;
+
+  // ------------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------------
+  const DEG = Math.PI / 180;
+  const FOCAL = 0.5 / Math.tan(15 * DEG);
+  const EL_MAX = 89 * DEG;
+  const DIST_MIN = 2.6, DIST_MAX = 16, DIST_DEFAULT = 6;
+  // the direction in which the light part is pulled away, per body
+  const SEP_DIRS = [[1, 0, 0], [1, 0, 0], [0.787, 0.617, 0]];
+  const AXES = [[0, 0, 0], [0, 1, 0], [0, 0, 1]];
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const state = {
+    mode: 0,
+    az: -Math.PI / 2, el: EL_MAX, dist: DIST_DEFAULT,
+    sep: 0,            // 0..1
+    cutOn: false,
+    shift: 0,          // how far the plane sits from the centre, -0.95..0.95
+    tilt: 0,           // degrees, -90..90
+    dir: 0,            // degrees, 0..180: which way the plane tilts
+    auto: true,        // the view turns slowly by itself unless the learner switches it off
+    axis: 0            // 0 none, 1 through the two heads, 2 upright
+  };
+
+  let dirty = true;
+  let dragging = false;
+  let busyUntil = 0;
+  let layout = { cx: 0, cy: 0, size: 300 };
+  const tweens = [];
+
+  // While the picture moves it is drawn with fewer rays per pixel, and the quality
+  // drops one more step if the computer cannot keep up. A still picture gets the most.
+  const STILL_GRID = 3;
+  const quality = { grid: 2, dprCap: 2, slow: 0, counted: 0 };
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function touch() { busyUntil = performance.now() + 220; dirty = true; }
+
+  // The slow turning of the view waits while the learner is handling something,
+  // so that what they move is seen against a ball that stands still.
+  let holdUntil = 0;
+  function hold(ms) { holdUntil = Math.max(holdUntil, performance.now() + ms); }
+
+  function kill(key) {
+    for (let i = tweens.length - 1; i >= 0; i--) if (tweens[i].key === key) tweens.splice(i, 1);
+  }
+  function go(key, to, ms) {
+    kill(key);
+    if (!ms || reduceMotion) { state[key] = to; dirty = true; return; }
+    tweens.push({ key, from: state[key], to, ms, t0: performance.now() });
+  }
+  function runTweens(now) {
+    let active = false;
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      const k = clamp((now - tw.t0) / tw.ms, 0, 1);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      state[tw.key] = tw.from + (tw.to - tw.from) * e;
+      if (k >= 1) tweens.splice(i, 1);
+      active = true;
+    }
+    return active;
+  }
+  function nearestAngle(target) {
+    return target + 2 * Math.PI * Math.round((state.az - target) / (2 * Math.PI));
+  }
+
+  // The cutting plane. It starts flat, tilts around a hinge, and the hinge itself
+  // can be turned. E1 and E2 are the axes of the flat picture of the section.
+  function planeFrame() {
+    const t = state.tilt * DEG, a = state.dir * DEG;
+    const st = Math.sin(t), ct = Math.cos(t), sa = Math.sin(a), ca = Math.cos(a);
+    const n = [-st * ca, -st * sa, ct];
+    const h = [-sa, ca, 0];
+    const e1 = [ct * ca, ct * sa, st];
+    const E1 = [ca * e1[0] - sa * h[0], ca * e1[1] - sa * h[1], ca * e1[2] - sa * h[2]];
+    const E2 = [sa * e1[0] + ca * h[0], sa * e1[1] + ca * h[1], sa * e1[2] + ca * h[2]];
+    return { n, h, e1, E1, E2, d: state.shift };
+  }
+
+  // Is the current section exactly the full symbol? Known in closed form for each body.
+  function isMatch() {
+    if (!state.cutOn) return false;
+    const { n, d } = planeFrame();
+    const flat = Math.abs(n[2]) > 0.99996;            // within half a degree of level
+    if (state.mode === 0) return flat && Math.abs(d) < 0.006;
+    if (state.mode === 1) return Math.abs(d) < 0.006 && Math.abs(n[1]) < 0.009 && Math.abs(n[0]) < 0.9998;
+    return flat && Math.abs(d) < 0.96;
+  }
+
+  // ------------------------------------------------------------------
+  // Drawing
+  // ------------------------------------------------------------------
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, quality.dprCap);
+    const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    relayout();
+  }
+
+  // keep the ball centred in the area that the card and the panel leave free
+  function relayout() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    let l = 0, r = W, t = 0, b = H;
+    if (document.body.classList.contains('intro')) {
+      b = $('startBox').getBoundingClientRect().top;
+    } else {
+      if (!panel.hidden) b = panel.getBoundingClientRect().top;
+      if (!card.hidden) {
+        const cr = card.getBoundingClientRect();
+        if (W > 900) r = cr.left; else t = cr.bottom;
+        document.body.style.setProperty('--card-bottom', Math.round(cr.bottom) + 'px');
+      } else {
+        document.body.style.setProperty('--card-bottom', '44px');
+      }
+    }
+    if (b - t < 140 || r - l < 140) { l = 0; r = W; t = 0; b = H; }
+    layout = { cx: (l + r) / 2, cy: (t + b) / 2, size: Math.min(r - l, b - t) };
+    dirty = true;
+  }
+
+  function draw(grid) {
+    const W = canvas.width, H = canvas.height;
+    const dpr = W / Math.max(1, canvas.clientWidth);
+    gl.viewport(0, 0, W, H);
+
+    const d = state.dist * (1 + 0.5 * state.sep);
+    const ce = Math.cos(state.el), se = Math.sin(state.el);
+    const cam = [d * ce * Math.cos(state.az), d * ce * Math.sin(state.az), d * se];
+    const f = [-cam[0] / d, -cam[1] / d, -cam[2] / d];
+    let r = [f[1], -f[0], 0];
+    const rl = Math.hypot(r[0], r[1]) || 1;
+    r = [r[0] / rl, r[1] / rl, 0];
+    const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+
+    const pf = planeFrame();
+    const glass = state.cutOn ? clamp(1 - state.sep / 0.25, 0, 1) : 0;
+
+    gl.uniform2f(U.uRes, W, H);
+    gl.uniform2f(U.uOff, (layout.cx - canvas.clientWidth / 2) * dpr, (canvas.clientHeight / 2 - layout.cy) * dpr);
+    gl.uniform1f(U.uScale, layout.size * dpr);
+    gl.uniform3fv(U.uCam, cam);
+    gl.uniformMatrix3fv(U.uCamMat, false, [r[0], r[1], r[2], u[0], u[1], u[2], f[0], f[1], f[2]]);
+    gl.uniform1f(U.uFocal, FOCAL);
+    gl.uniform1f(U.uMode, state.mode);
+    gl.uniform1f(U.uSep, state.sep * 1.05);
+    gl.uniform3fv(U.uSepDir, SEP_DIRS[state.mode]);
+    gl.uniform3fv(U.uPlaneN, pf.n);
+    gl.uniform1f(U.uPlaneD, state.cutOn ? pf.d : 10);
+    gl.uniform3fv(U.uPlaneU, pf.e1);
+    gl.uniform3fv(U.uPlaneV, pf.h);
+    gl.uniform1f(U.uGlass, glass);
+    gl.uniform3fv(U.uAxis, AXES[state.axis]);
+    gl.uniform1f(U.uGrid, grid);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    if (U2 && state.cutOn) {
+      gl2.viewport(0, 0, secCanvas.width, secCanvas.height);
+      gl2.clearColor(0, 0, 0, 0);
+      gl2.clear(gl2.COLOR_BUFFER_BIT);
+      gl2.uniform2f(U2.uRes, secCanvas.width, secCanvas.height);
+      gl2.uniform3fv(U2.uN, pf.n);
+      gl2.uniform3fv(U2.uE1, pf.E1);
+      gl2.uniform3fv(U2.uE2, pf.E2);
+      gl2.uniform1f(U2.uD, pf.d);
+      gl2.uniform1f(U2.uMode, state.mode);
+      gl2.drawArrays(gl2.TRIANGLES, 0, 3);
+    }
+  }
+
+  let last = performance.now();
+  let wasMoving = false;
+
+  function frame() {
+    const now = performance.now();
+    const dtMs = now - last;
+    last = now;
+    const dt = Math.min(0.05, dtMs / 1000);
+
+    const tweening = runTweens(now);
+    if (tweening) syncControls();
+    const spinning = state.auto && !dragging && !sliderHeld && now >= holdUntil;
+    if (spinning) state.az += dt * 0.22;
+    const moving = spinning || tweening || dragging || now < busyUntil;
+
+    if (moving || dirty || wasMoving) {
+      draw(moving ? quality.grid : STILL_GRID);
+      dirty = false;
+
+      if (moving && wasMoving && !document.hidden && dtMs < 250) {
+        quality.counted++;
+        if (dtMs > 36) quality.slow++;
+        if (quality.counted >= 40) {
+          if (quality.slow > 24) {
+            if (quality.grid > 1) quality.grid = 1;
+            else if (quality.dprCap > 1) { quality.dprCap = 1; resize(); }
+          }
+          quality.counted = 0;
+          quality.slow = 0;
+        }
+      }
+    }
+    wasMoving = moving;
+    requestAnimationFrame(frame);
+  }
+
+  // ------------------------------------------------------------------
+  // The learning journey
+  // ------------------------------------------------------------------
+  const LESSONS = [
+    {
+      title: 'ציור שטוח או גוף?',
+      intro: '<p>סמל היין והיאנג הוא ציור שטוח: עיגול שמחולק לשתי טיפות, ובכל טיפה נקודה בצבע של האחרת.</p>' +
+             '<p>מה שמולכם נראה בדיוק כמו הציור. אבל האם זה באמת ציור שטוח?</p>',
+      task: 'גררו את הצורה עם העכבר וסובבו אותה.',
+      principle: '<p>זה כדור. מלמעלה הוא נראה כמו הציור, אבל יש לו עומק.</p>' +
+                 '<p>ציור שטוח הוא רק מבט אחד על גוף. לכן אותו ציור יכול להתאים לגופים שונים מאוד, וזה הלב של כל המסע.</p>',
+      tools: [], hl: null,
+      setup: { mode: 0, cutOn: false, az: -90, el: 89 },
+      check: (s, t) => t.rot > 0.5
+    },
+    {
+      title: 'מה זה חתך?',
+      intro: '<p>כדי לראות מה יש בתוך גוף, פורסים אותו. הסכין היא <b>מישור</b>: משטח ישר ודק, כמו לוח הזכוכית שמולכם.</p>' +
+             '<p>הפרוסה שנחשפת היא <b>חתך</b>: צורה שטוחה. בחלון "החתך עכשיו" רואים אותה במבט ישר מלמעלה.</p>' +
+             '<p>החלק שהמישור הסיר נשאר שקוף, כדי שהכדור כולו יישאר מול העיניים.</p>',
+      task: 'הזיזו את המישור למעלה ולמטה, ומצאו את הגובה שבו החתך הוא הסמל המלא.',
+      principle: '<p>כל מישור נותן חתך אחר של אותו גוף.</p>' +
+                 '<p>בגוף הזה הסמל המלא מופיע רק כשהמישור עובר במרכז. מעל המרכז ומתחתיו הכדור צר יותר, ולכן הסמל נקטם.</p>',
+      tools: ['shift'], hl: 'shift',
+      setup: { mode: 0, cutOn: true, shift: 0.7, az: -62, el: 34 },
+      check: (s, t, m) => (t.shiftMax - t.shiftMin) > 0.25 && m
+    },
+    {
+      title: 'חתך אחד, שלושה גופים',
+      intro: '<p>עכשיו ההפתעה. יש כאן שלושה גופים שונים, ולשלושתם בדיוק אותו חתך באמצע: הסמל המלא.</p>',
+      task: 'עברו בין שלושת הגופים, והפרידו את החלקים כדי לראות כמה הם שונים זה מזה.',
+      principle: '<p>חתך אחד לא קובע את הגוף. כדי להפוך ציור שטוח לגוף צריך להוסיף מידע שלא היה בציור: להחליט איך נותנים לו עומק.</p>' +
+                 '<p>יש שלוש דרכים טבעיות לעשות את זה: משיכה, סיבוב וערימה. נכיר אותן אחת אחת.</p>',
+      tools: ['modes', 'sep'], hl: 'modes',
+      setup: { mode: 0, cutOn: true, az: -62, el: 40 },
+      check: (s, t) => t.modes.size === 3 && t.sepMax > 0.35
+    },
+    {
+      title: 'דרך ראשונה: משיכה',
+      intro: '<p>מושכים את הציור ישר למעלה ולמטה, כמו חותכן עוגיות שננעץ בבצק. הכדור קוטם את מה שבולט ממנו.</p>',
+      task: 'הפרידו את החלקים, וסובבו את התצוגה כדי לראות אותם גם מלמעלה וגם מהצד.',
+      principle: '<p>כאן הקשר בין החלק לחתך ברור לעין: כל חלק הוא טיפה עבה, ומלמעלה הוא נראה בדיוק כמו חצי מהסמל.</p>' +
+                 '<p><b>המחיר:</b> הסמל המלא מופיע רק בחתך אחד, זה שעובר במרכז.</p>',
+      tools: ['sep'], hl: 'sep',
+      setup: { mode: 0, cutOn: false, az: -70, el: 48 },
+      check: (s, t) => t.sepMax > 0.55 && t.rot > 0.4
+    },
+    {
+      title: 'דרך שנייה: סיבוב',
+      intro: '<p>לוקחים טיפה אחת ומסובבים אותה חצי סיבוב סביב הציר שעובר דרך שתי הנקודות, כמו דלת על ציר. הנפח שהטיפה עוברת בו הוא אחד משני החלקים.</p>' +
+             '<p>כך כל עיגול בציור הופך לכדור. המוט הכתום מסמן את הציר.</p>',
+      task: 'סובבו את המישור סביב הציר, מקצה אחד של המחוון עד הקצה השני, ועקבו אחרי חלון החתך. הכדור עצמו נשאר במקומו, ורק המישור נע בתוכו.',
+      principle: '<p>החתך נשאר הסמל המלא בכל זווית. יש כאן אינסוף מישורים שנותנים את הסמל, כמו דפים של ספר סביב השדרה.</p>' +
+                 '<p>רק בקצוות, כשהמישור מתיישר בדיוק עם התפר שבין שני החלקים, הסמל נעלם.</p>' +
+                 '<p><b>המחיר:</b> החלק המופרד כבר לא נראה כמו טיפה. הוא חצי כדור עם בליטה ושקע. נסו להפריד ולראות.</p>',
+      tools: ['tilt', 'sep'], hl: 'tilt',
+      setup: { mode: 1, cutOn: true, axis: 1, az: -78, el: 42 },
+      check: (s, t) => (t.tiltMax - t.tiltMin) >= 100
+    },
+    {
+      title: 'דרך שלישית: ערימה',
+      intro: '<p>עורמים פרוסות דקות זו על זו. כל פרוסה היא הסמל המלא, מוקטן כך שיתאים לרוחב הכדור בגובה שלה, ומסובב מעט ביחס לפרוסה שמתחתיה.</p>',
+      task: 'הזיזו את המישור מלמטה עד למעלה, ועקבו אחרי חלון החתך.',
+      principle: '<p>כל חתך אופקי הוא הסמל המלא, רק קטן יותר ומסובב. בגלל הסיבוב שני החלקים מתפתלים זה סביב זה כמו מערבולת.</p>' +
+                 '<p><b>המחיר:</b> זה עובד רק במישורים אופקיים, כלומר בכיוון חיתוך אחד בלבד.</p>',
+      tools: ['shift', 'sep'], hl: 'shift',
+      setup: { mode: 2, cutOn: true, axis: 2, az: -62, el: 36 },
+      check: (s, t) => (t.shiftMax - t.shiftMin) >= 1.0
+    },
+    {
+      title: 'האם יש כדור מושלם?',
+      intro: '<p>האם אפשר לבנות כדור שכל חתך דרך המרכז שלו, בכל כיוון, הוא הסמל המלא?</p>' +
+             '<p>נבדוק על גוף הסיבוב, שבו כבר מצאנו אינסוף מישורים טובים. המישור כאן מוטה ועובר דרך המרכז.</p>',
+      task: 'שנו את כיוון ההטיה, ובדקו מתי החתך מפסיק להיות הסמל המלא.',
+      principle: '<p>ברגע שהמישור עוזב את הציר, הסמל נשבר. וזה לא מקרה: כדור מושלם כזה לא יכול להתקיים.</p>' +
+                 '<p>בכל חתך של הסמל הראש הלבן נמצא בצד אחד של המרכז, והראש השחור בצד הנגדי. אילו הסמל הופיע בכל כיוון, אפשר היה לסובב את המישור בהדרגה עד שיתהפך. אז הראש הלבן היה מגיע למקום של הראש השחור, ואותו אזור בכדור היה צריך להיות גם לבן וגם שחור.</p>',
+      tools: ['dir', 'tilt'], hl: 'dir',
+      setup: { mode: 1, cutOn: true, tilt: 40, axis: 1, az: -70, el: 50 },
+      check: (s, t) => (t.dirMax - t.dirMin) >= 45 && t.sawMiss
+    },
+    {
+      title: 'סיכום ומעבדה חופשית',
+      intro: '<table class="sum"><thead><tr><th>הדרך</th><th>הסמל המלא מופיע</th><th>כך נראה חלק</th></tr></thead><tbody>' +
+             '<tr><td>משיכה</td><td>רק בחתך שבמרכז</td><td>טיפה עבה</td></tr>' +
+             '<tr><td>סיבוב</td><td>בכל מישור דרך הציר</td><td>חצי כדור עם בליטה ושקע</td></tr>' +
+             '<tr><td>ערימה</td><td>בכל חתך אופקי</td><td>גוף מפותל</td></tr>' +
+             '</tbody></table>' +
+             '<p>מעכשיו כל הכלים פתוחים. אפשר לחתוך כל גוף בכל מישור.</p>',
+      introSay: 'שלוש הדרכים בקצרה. במשיכה, הסמל המלא מופיע רק בחתך שבמרכז, וכל חלק הוא טיפה עבה. ' +
+                'בסיבוב, הסמל המלא מופיע בכל מישור שעובר דרך הציר, וכל חלק הוא חצי כדור עם בליטה ושקע. ' +
+                'בערימה, הסמל המלא מופיע בכל חתך אופקי, וכל חלק הוא גוף מפותל. ' +
+                'מעכשיו כל הכלים פתוחים. אפשר לחתוך כל גוף בכל מישור.',
+      task: 'אתגר: מצאו בכל אחד משלושת הגופים מישור שנותן את הסמל המלא.',
+      principle: '<p>מצאתם את שלושתם.</p>' +
+                 '<p>העיקרון הכללי: במעבר מדו מימד לתלת מימד תמיד מוסיפים מידע שלא היה בציור. אין דרך אחת נכונה להוסיף אותו, ולכל בחירה יש מה שהיא שומרת ומה שהיא מאבדת.</p>',
+      tools: ['modes', 'sep', 'cut', 'shift', 'tilt', 'dir'], hl: null, axisByMode: true,
+      setup: { mode: 0, cutOn: true, tilt: 30, dir: 60, az: -62, el: 44 },
+      check: (s, t) => t.matchModes.size === 3
+    }
+  ];
+
+  const sepInput = $('sep'), shiftInput = $('shift'), tiltInput = $('tilt'), dirInput = $('dir');
+  const cutInput = $('cutOn'), autoBtn = $('auto'), faceBtn = $('faceview');
+  const modeBtns = Array.from(document.querySelectorAll('.modes button'));
+  const toolEls = Array.from(document.querySelectorAll('[data-tool]'));
+  const badge = $('badge');
+  const dotsEl = $('dots');
+
+  let cur = 0;
+  let tracker = null;
+  const done = new Set();
+  const revealed = new Set();
+
+  function newTracker(su) {
+    return {
+      rot: 0,
+      modes: new Set([su.mode]),
+      matchModes: new Set(),
+      sepMax: su.sep || 0,
+      shiftMin: su.shift || 0, shiftMax: su.shift || 0,
+      tiltMin: su.tilt || 0, tiltMax: su.tilt || 0,
+      dirMin: su.dir || 0, dirMax: su.dir || 0,
+      sawMiss: false
+    };
+  }
+
+  // called after every change the learner makes
+  function note() {
+    const t = tracker;
+    const m = isMatch();
+    t.modes.add(state.mode);
+    t.sepMax = Math.max(t.sepMax, state.sep);
+    t.shiftMin = Math.min(t.shiftMin, state.shift); t.shiftMax = Math.max(t.shiftMax, state.shift);
+    t.tiltMin = Math.min(t.tiltMin, state.tilt); t.tiltMax = Math.max(t.tiltMax, state.tilt);
+    t.dirMin = Math.min(t.dirMin, state.dir); t.dirMax = Math.max(t.dirMax, state.dir);
+    if (state.cutOn) {
+      if (m) t.matchModes.add(state.mode); else t.sawMiss = true;
+    }
+    if (!done.has(cur) && LESSONS[cur].check(state, t, m)) {
+      done.add(cur);
+      renderCard(false);
+      $('principle').scrollIntoView({ block: 'nearest' });
+      if (narrationOn) narrate(['principle']);
+    }
+  }
+
+  function renderCard(resetScroll) {
+    const L = LESSONS[cur];
+    const isDone = done.has(cur);
+    const open = isDone || revealed.has(cur);
+    $('count').textContent = 'שלב ' + (cur + 1) + ' מתוך ' + LESSONS.length;
+    $('title').textContent = L.title;
+    $('intro').innerHTML = L.intro;
+    $('taskText').textContent = L.task;
+    $('principleText').innerHTML = L.principle;
+    $('task').classList.toggle('done', isDone);
+    $('principle').hidden = !open;
+    $('reveal').hidden = open;
+    $('prev').disabled = cur === 0;
+    $('next').hidden = cur === LESSONS.length - 1;
+    $('next').classList.toggle('primary', open);
+    Array.from(dotsEl.children).forEach((b, i) => {
+      b.classList.toggle('done', done.has(i));
+      if (i === cur) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    if (resetScroll) $('cbody').scrollTop = 0;
+    relayout();
+  }
+
+  function enterStep(i, animate) {
+    cur = clamp(i, 0, LESSONS.length - 1);
+    const L = LESSONS[cur], su = L.setup;
+    const ms = animate ? 600 : 0;
+    state.mode = su.mode;
+    state.cutOn = !!su.cutOn;
+    state.axis = L.axisByMode ? su.mode : (su.axis || 0);
+    hold(1500);
+    go('sep', su.sep || 0, ms);
+    go('shift', su.shift || 0, ms);
+    go('tilt', su.tilt || 0, ms);
+    go('dir', su.dir || 0, ms);
+    go('az', nearestAngle(su.az * DEG), ms);
+    go('el', su.el * DEG, ms);
+    go('dist', DIST_DEFAULT, ms);
+    tracker = newTracker(su);
+    toolEls.forEach(el => {
+      el.hidden = !L.tools.includes(el.dataset.tool);
+      el.classList.toggle('hl', el.dataset.tool === L.hl);
+    });
+    syncControls();
+    renderCard(true);
+    narrateStep();
+  }
+
+  LESSONS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'שלב ' + (i + 1) + ': ' + L.title);
+    b.title = L.title;
+    b.addEventListener('click', () => enterStep(i, true));
+    dotsEl.appendChild(b);
+  });
+
+  $('prev').addEventListener('click', () => enterStep(cur - 1, true));
+  $('next').addEventListener('click', () => enterStep(cur + 1, true));
+  $('reveal').addEventListener('click', () => {
+    revealed.add(cur);
+    renderCard(false);
+    if (narrationOn) narrate(['principle']);
+  });
+  $('reset').addEventListener('click', () => enterStep(cur, true));
+
+  function setCardHidden(hide) {
+    card.hidden = hide;
+    $('showCard').hidden = !hide;
+    document.body.classList.toggle('nocard', hide);
+    relayout();
+  }
+  $('hideCard').addEventListener('click', () => setCardHidden(true));
+  $('showCard').addEventListener('click', () => setCardHidden(false));
+
+  // ------------------------------------------------------------------
+  // Narration. It uses the Hebrew voice that the computer already has, read by
+  // the browser, so it costs nothing and works offline. Each step is read in
+  // parts: the explanation, the task, and the principle once it is revealed.
+  // ------------------------------------------------------------------
+  const synth = window.speechSynthesis || null;
+  const voiceBtn = $('voiceBtn');
+  const sayBtns = Array.from(document.querySelectorAll('.say'));
+  const PARTS = { intro: $('partIntro'), task: $('task'), principle: $('principle') };
+  let heVoice = null;
+  let started = false;        // false while the opening screen is up
+  let narrationOn = false;    // the learner's choice
+  let sayToken = 0;
+  let speakingPart = null;
+  let keepAlive = null;       // the browser may drop an utterance that nothing refers to
+
+  function findVoice() {
+    if (!synth) return null;
+    const he = synth.getVoices().filter(v => /^(he|iw)/i.test(v.lang));
+    heVoice = he.find(v => /natural/i.test(v.name)) || he[0] || null;
+    return heVoice;
+  }
+
+  function plain(html) {
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    return Array.from(d.querySelectorAll('p')).map(p => p.textContent.trim()).join(' ');
+  }
+  function textOf(L, part) {
+    if (part === 'intro') return L.title + (/[.?!]$/.test(L.title) ? ' ' : '. ') + (L.introSay || plain(L.intro));
+    if (part === 'task') return 'נסו בעצמכם. ' + L.task;
+    return 'העיקרון. ' + plain(L.principle);
+  }
+  // the whole script of the narration; the recorded files are produced from it
+  window.yyNarrationScript = () => LESSONS.map(L => ({
+    intro: textOf(L, 'intro'), task: textOf(L, 'task'), principle: textOf(L, 'principle')
+  }));
+
+  // Recorded narration, one file per part, sits in a folder next to the page.
+  // When the files are missing the page falls back to the computer's own voice.
+  const AUDIO_DIR = 'yin-yang-3d-audio/';
+  const player = new Audio();
+  let recorded = null;        // null until we know whether the recorded files exist
+  (() => {
+    const probe = new Audio();
+    probe.preload = 'metadata';
+    probe.addEventListener('loadedmetadata', () => { recorded = true; refreshVoiceUi(false); });
+    probe.addEventListener('error', () => { recorded = false; });
+    probe.src = AUDIO_DIR + 's1-intro.mp3';
+  })();
+  function canNarrate() { return recorded === true || !!findVoice(); }
+
+  function setSpeaking(part) {
+    speakingPart = part;
+    Object.keys(PARTS).forEach(k => PARTS[k].classList.toggle('speaking', k === part));
+    sayBtns.forEach(b => {
+      const on = b.dataset.part === part;
+      b.setAttribute('aria-pressed', String(on));
+      b.querySelector('span').textContent = on ? 'עצירה' : 'הקראה';
+    });
+  }
+
+  function stopSpeech() {
+    sayToken++;
+    if (synth) synth.cancel();
+    player.onended = null;
+    player.onerror = null;
+    if (!player.paused) player.pause();
+    setSpeaking(null);
+  }
+
+  // reads the given parts one after the other
+  function narrate(parts) {
+    stopSpeech();
+    if (!canNarrate()) return;
+    const my = sayToken;
+    let i = 0;
+    const nextPart = () => {
+      if (my !== sayToken) return;
+      if (i >= parts.length) { setSpeaking(null); return; }
+      const part = parts[i++];
+      setSpeaking(part);
+      if (recorded) playFile(part, my, nextPart); else speakText(part, my, nextPart);
+    };
+    setTimeout(nextPart, 80);
+  }
+
+  // the recorded file of one part of the current step
+  function playFile(part, my, then) {
+    player.onended = () => { if (my === sayToken) setTimeout(then, 250); };
+    player.onerror = () => {
+      if (my !== sayToken) return;
+      if (findVoice()) speakText(part, my, then); else then();
+    };
+    player.src = AUDIO_DIR + 's' + (cur + 1) + '-' + part + '.mp3';
+    const playing = player.play();
+    if (playing && playing.catch) {
+      playing.catch(err => { if (my === sayToken && err && err.name === 'NotAllowedError') setSpeaking(null); });
+    }
+  }
+
+  // the computer's own voice, sentence by sentence
+  function speakText(part, my, then) {
+    if (!synth || !findVoice()) { then(); return; }
+    const queue = (textOf(LESSONS[cur], part).match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [])
+      .map(s => s.trim()).filter(Boolean);
+    let i = 0;
+    const next = () => {
+      if (my !== sayToken) return;
+      if (i >= queue.length) { then(); return; }
+      const u = new SpeechSynthesisUtterance(queue[i++]);
+      u.voice = heVoice;
+      u.lang = heVoice.lang;
+      u.onend = next;
+      u.onerror = () => { if (my === sayToken) next(); };
+      keepAlive = u;
+      synth.speak(u);
+    };
+    next();
+  }
+
+  function narrateStep() {
+    if (!started || !narrationOn) return;
+    const open = done.has(cur) || revealed.has(cur);
+    narrate(open ? ['intro', 'task', 'principle'] : ['intro', 'task']);
+  }
+
+  // Voices arrive a moment after the page loads. Until we know otherwise we assume
+  // a Hebrew voice exists; "settled" means the waiting is over.
+  function refreshVoiceUi(settled) {
+    const ok = canNarrate();
+    if (!ok && !settled) return;
+    voiceBtn.disabled = !ok;
+    voiceBtn.setAttribute('aria-pressed', String(ok && narrationOn));
+    sayBtns.forEach(b => { b.hidden = !ok; });
+    $('voiceNote').hidden = ok;
+    $('startVoice').hidden = !ok;
+    $('startNote').hidden = ok;
+    $('startQuiet').textContent = ok ? 'התחילו בלי קריינות' : 'התחילו';
+    $('startQuiet').classList.toggle('primary', !ok);
+    relayout();
+  }
+  if (synth && synth.addEventListener) synth.addEventListener('voiceschanged', () => refreshVoiceUi(false));
+  refreshVoiceUi(false);
+  setTimeout(() => refreshVoiceUi(true), 1500);
+
+  voiceBtn.addEventListener('click', () => {
+    narrationOn = !narrationOn;
+    voiceBtn.setAttribute('aria-pressed', String(narrationOn));
+    if (narrationOn) narrateStep(); else stopSpeech();
+  });
+  // every part can be read again on request, even while the narration is muted
+  sayBtns.forEach(b => b.addEventListener('click', () => {
+    const part = b.dataset.part;
+    if (speakingPart === part) stopSpeech(); else narrate([part]);
+  }));
+  window.addEventListener('pagehide', () => { if (synth) synth.cancel(); });
+
+  function begin(withVoice) {
+    started = true;
+    narrationOn = withVoice && canNarrate();
+    document.body.classList.remove('intro');
+    $('start').hidden = true;
+    voiceBtn.setAttribute('aria-pressed', String(narrationOn));
+    enterStep(0, false);
+    canvas.focus();
+  }
+  $('startVoice').addEventListener('click', () => begin(true));
+  $('startQuiet').addEventListener('click', () => begin(false));
+
+  // ------------------------------------------------------------------
+  // Controls
+  // ------------------------------------------------------------------
+  function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
+
+  function syncControls() {
+    sepInput.value = Math.round(state.sep * 100);
+    shiftInput.value = Math.round(state.shift * 100);
+    tiltInput.value = Math.round(state.tilt);
+    dirInput.value = Math.round(state.dir);
+    cutInput.checked = state.cutOn;
+    modeBtns.forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.mode) === state.mode)));
+    setText($('tiltOut'), Math.round(state.tilt) + '°');
+    setText($('dirOut'), Math.round(state.dir) + '°');
+    setText($('shiftOut'), Math.abs(state.shift) < 0.005 ? 'דרך המרכז' : (state.shift > 0 ? 'מעל המרכז' : 'מתחת למרכז'));
+    $('sectionBox').hidden = !state.cutOn || !U2;
+    faceBtn.hidden = !state.cutOn;
+    autoBtn.setAttribute('aria-pressed', String(state.auto));
+    const m = isMatch();
+    setText(badge, m ? 'זה הסמל המלא' : 'זה לא הסמל המלא');
+    badge.classList.toggle('ok', m);
+  }
+
+  function userChange() {
+    syncControls();
+    note();
+    touch();
+    hold(2500);
+  }
+
+  // while a slider is dragged with the mouse, it settles gently on its key positions
+  let sliderHeld = false;
+  [sepInput, shiftInput, tiltInput, dirInput].forEach(el => {
+    el.addEventListener('pointerdown', () => { sliderHeld = true; });
+  });
+  window.addEventListener('pointerup', () => { sliderHeld = false; });
+  function snap(v, targets, reach) {
+    if (!sliderHeld) return v;
+    for (const t of targets) if (Math.abs(v - t) <= reach) return t;
+    return v;
+  }
+
+  sepInput.addEventListener('input', () => {
+    kill('sep');
+    state.sep = Number(sepInput.value) / 100;
+    userChange();
+  });
+  shiftInput.addEventListener('input', () => {
+    kill('shift');
+    state.shift = snap(Number(shiftInput.value), [0], 3) / 100;
+    userChange();
+  });
+  tiltInput.addEventListener('input', () => {
+    kill('tilt');
+    state.tilt = snap(Number(tiltInput.value), [0], 2);
+    userChange();
+  });
+  dirInput.addEventListener('input', () => {
+    kill('dir');
+    state.dir = snap(Number(dirInput.value), [0, 90, 180], 2);
+    userChange();
+  });
+  cutInput.addEventListener('change', () => {
+    state.cutOn = cutInput.checked;
+    userChange();
+  });
+  modeBtns.forEach(b => b.addEventListener('click', () => {
+    state.mode = Number(b.dataset.mode);
+    if (LESSONS[cur].axisByMode) state.axis = state.mode;
+    userChange();
+  }));
+
+  autoBtn.addEventListener('click', () => {
+    state.auto = !state.auto;
+    holdUntil = 0;
+    syncControls();
+    dirty = true;
+  });
+
+  $('topview').addEventListener('click', () => {
+    hold(6000);
+    go('az', nearestAngle(-Math.PI / 2), 700);
+    go('el', EL_MAX, 700);
+  });
+  faceBtn.addEventListener('click', () => {
+    const { n } = planeFrame();
+    hold(6000);
+    if (Math.hypot(n[0], n[1]) > 0.05) go('az', nearestAngle(Math.atan2(n[1], n[0])), 700);
+    go('el', clamp(Math.asin(clamp(n[2], -1, 1)), 0.2, EL_MAX), 700);
+  });
+  $('zin').addEventListener('click', () => go('dist', clamp(state.dist / 1.25, DIST_MIN, DIST_MAX), 220));
+  $('zout').addEventListener('click', () => go('dist', clamp(state.dist * 1.25, DIST_MIN, DIST_MAX), 220));
+
+  // drag to rotate, pinch or wheel to zoom
+  const pts = new Map();
+  canvas.addEventListener('pointerdown', e => {
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* the drag still works without capture */ }
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragging = true;
+    kill('az'); kill('el');
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId);
+    if (!p) return;
+    if (pts.size === 1) {
+      const dx = (e.clientX - p.x) * 0.008, dy = (e.clientY - p.y) * 0.008;
+      state.az -= dx;
+      state.el = clamp(state.el + dy, -EL_MAX, EL_MAX);
+      tracker.rot += Math.abs(dx) + Math.abs(dy);
+      note();
+    } else if (pts.size === 2) {
+      let other = null;
+      pts.forEach((q, id) => { if (id !== e.pointerId) other = q; });
+      const before = Math.hypot(p.x - other.x, p.y - other.y);
+      const after = Math.hypot(e.clientX - other.x, e.clientY - other.y);
+      if (before > 0 && after > 0) state.dist = clamp(state.dist * before / after, DIST_MIN, DIST_MAX);
+    }
+    p.x = e.clientX;
+    p.y = e.clientY;
+    dirty = true;
+  });
+  function release(e) {
+    pts.delete(e.pointerId);
+    dragging = pts.size > 0;
+    dirty = true;
+    hold(2500);
+  }
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    kill('dist');
+    const unit = e.deltaMode === 1 ? 33 : 1;
+    state.dist = clamp(state.dist * Math.exp(e.deltaY * unit * 0.0012), DIST_MIN, DIST_MAX);
+    touch();
+  }, { passive: false });
+
+  canvas.addEventListener('keydown', e => {
+    const step = 0.09;
+    let used = true, turned = false;
+    if (e.key === 'ArrowLeft') { state.az += step; turned = true; }
+    else if (e.key === 'ArrowRight') { state.az -= step; turned = true; }
+    else if (e.key === 'ArrowUp') { state.el = clamp(state.el + step, -EL_MAX, EL_MAX); turned = true; }
+    else if (e.key === 'ArrowDown') { state.el = clamp(state.el - step, -EL_MAX, EL_MAX); turned = true; }
+    else if (e.key === '+' || e.key === '=') state.dist = clamp(state.dist / 1.12, DIST_MIN, DIST_MAX);
+    else if (e.key === '-' || e.key === '_') state.dist = clamp(state.dist * 1.12, DIST_MIN, DIST_MAX);
+    else used = false;
+    if (used) {
+      e.preventDefault();
+      if (turned) { kill('az'); kill('el'); tracker.rot += step; note(); hold(2500); }
+      touch();
+    }
+  });
+
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(relayout);
+    ro.observe(panel);
+    ro.observe(card);
+    ro.observe($('startBox'));
+  }
+
+  enterStep(0, false);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
